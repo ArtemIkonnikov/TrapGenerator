@@ -36,6 +36,7 @@ class TrapProperty {
         return "TrapProperty{" +
                 "ip='" + ip + '\'' +
                 ", version='" + version + '\'' +
+                ", trapOid='" + trapOid + '\'' +
                 ", oids=" + oids +
                 ", values=" + values +
                 '}';
