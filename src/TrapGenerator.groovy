@@ -80,11 +80,14 @@ class TrapGenerator {
                 try {
                     bufferedWriter = new BufferedWriter(new FileWriter(batFile, true))
                     bufferedWriter.write(completeStr + "\n")
-                } catch (IOException e ) { e.printStackTrace() }
+                } catch (IOException e ) {
+                    e.printStackTrace()
+                }
                 finally {
                     try {
                         bufferedWriter.close()
-                    } catch (Exception e){e.printStackTrace()
+                    } catch (Exception e){
+                        e.printStackTrace()
                     }
                 }
 
@@ -100,6 +103,7 @@ class TrapGenerator {
         String ip
         String trapVer
         String trapOid
+        String type
 
         for (String oid : mapVarbinds.keySet()) {
             if (receivedStr.contains(oid)) {
@@ -109,6 +113,12 @@ class TrapGenerator {
 
                 while (matcher1.find())
                     ip = matcher1.group()
+
+                if (receivedStr.contains("INFORM")){
+                    type = "INFORM"
+                } else {
+                    type = "trap"
+                }
 
                 if (receivedStr.contains("V1TRAP")) {
                     trapVer = "v1"
@@ -140,11 +150,17 @@ class TrapGenerator {
 
         TrapProperty trap
         if (ip != null && trapOid != null && oids != null && values != null) {
-             trap = new TrapProperty(ip, trapVer, trapOid, oids, values)
+             trap = new TrapProperty(ip, trapVer, trapOid, oids, values, type)
         }
 
         StringBuilder stringBuilder = new StringBuilder()
-        String batFileName = trap.ip + "_" + trap.version + "_traps.bat"
+        String batFileName
+
+        if (trap.type.equals("INFORM")){
+             batFileName = trap.ip + "_" + trap.version + "_informs.bat"
+        } else {
+             batFileName = trap.ip + "_" + trap.version + "_traps.bat"
+        }
         batFile = new File(batFilePath, batFileName)
 
         if (trap.version.equals("v1")) {
@@ -153,9 +169,14 @@ class TrapGenerator {
             stringBuilder.append(trap.ip + " ")
             stringBuilder.append(trap.trapOid + " ")
             stringBuilder.append(trap.ip + " 6 0 '55' ")
-        } else if (trap.version.equals("v2")) {
+        } else if (trap.version.equals("v2") && trap.type.equals("trap")) {
             stringBuilder.append("SET NETSNMP_PATH=C:\\usr\\bin\n" +
                     "%NETSNMP_PATH%\\snmptrap -v 2c -c public ")
+            stringBuilder.append(trap.ip + " \"\" ")
+            stringBuilder.append(trap.trapOid + " ")
+        } else {
+            stringBuilder.append("SET NETSNMP_PATH=C:\\usr\\bin\n" +
+                    "%NETSNMP_PATH%\\snmpinform -v 2c -c public ")
             stringBuilder.append(trap.ip + " \"\" ")
             stringBuilder.append(trap.trapOid + " ")
         }
