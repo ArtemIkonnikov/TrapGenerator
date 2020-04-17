@@ -8,7 +8,11 @@ class TrapProperty {
     List<String> finalOids = new ArrayList<>()
     List<String> values = new ArrayList<>()
 
+<<<<<<< HEAD
     TrapProperty(String ip, String version, String trapOid, List<String> oids, List<String> finalOids, List<String> values, String type) {
+=======
+    TrapProperty(String ip, String version, String trapOid, List<String> oids, List<String> values ,String type) {
+>>>>>>> 6b2e1c148aba66dda23bd572b2f15cffe54c42ac
         this.ip = ip
         this.version = version
         this.trapOid = trapOid
@@ -42,10 +46,13 @@ class TrapProperty {
         return type
     }
 
+<<<<<<< HEAD
     List<String> getFinalOids() {
         return finalOids
     }
 
+=======
+>>>>>>> 6b2e1c148aba66dda23bd572b2f15cffe54c42ac
 
     @Override
     public String toString() {
