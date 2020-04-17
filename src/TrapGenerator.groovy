@@ -16,10 +16,10 @@ class TrapGenerator {
 
     public static void main(String[] args) {
 
-        String trapsReceivedPath
-        String jsonRulesFilePath
+          String trapsReceivedPath
+          String jsonRulesFilePath
 
-         Map<String, String> mapVarbinds = new HashMap<>()
+        Map<String, String> mapVarbinds = new HashMap<>()
 
         for (int i = 0; i < args.length - 1; i++) {
             if (args[i].equals("-d")) {
@@ -68,38 +68,64 @@ class TrapGenerator {
 
         File trapsReceivedFile = new File(trapsReceivedPath)
         String readableStr
+        String completeStr
         BufferedReader bufferedReader
+        boolean selector
+        List<String> checkList = new ArrayList<>()
 
-        try  {
-            bufferedReader = new BufferedReader(new FileReader(trapsReceivedFile) )
+        try {
+            bufferedReader = new BufferedReader(new FileReader(trapsReceivedFile))
             while (bufferedReader.ready()) {
                 readableStr = bufferedReader.readLine()
-                String completeStr = trapBuilder(readableStr,mapVarbinds)
+                selector = true
+                for (String oid : mapVarbinds.keySet()) {
+                    if (readableStr.contains(oid)) {
 
-                BufferedWriter bufferedWriter
-                try {
-                    bufferedWriter = new BufferedWriter(new FileWriter(batFile, true))
-                    bufferedWriter.write(completeStr + "\n")
-                } catch (IOException e ) { e.printStackTrace() }
-                finally {
-                    try {
-                        bufferedWriter.close()
-                    } catch (Exception e){e.printStackTrace()
+                        if (selector) {
+
+                            completeStr = trapBuilder(readableStr, mapVarbinds)
+
+                            if (!checkList.contains(completeStr)) {
+
+                                if (completeStr.contains("SET NETSNMP_PATH=C:\\usr\\bin\n")){
+                                    checkList.add(completeStr.replace("SET NETSNMP_PATH=C:\\usr\\bin\n",""))
+                                } else {
+                                    checkList.add(completeStr)
+                                }
+                            BufferedWriter bufferedWriter
+                            try {
+                                bufferedWriter = new BufferedWriter(new FileWriter(batFile, true))
+                                bufferedWriter.write(completeStr + "\n")
+                            } catch (IOException e) {
+                                e.printStackTrace()
+                            }
+                            finally {
+                                try {
+                                    bufferedWriter.close()
+                                } catch (Exception e) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                            selector = false
+                        }
                     }
                 }
-
             }
-        } catch (IOException e ) {
+        } catch (IOException e) {
             e.printStackTrace()
         }
     }
-    public static String trapBuilder (String receivedStr , Map<String, String> mapVarbinds ){
+
+    public static String trapBuilder(String receivedStr, Map<String, String> mapVarbinds) {
 
         List<String> values = new ArrayList<>()
         List<String> oids = new ArrayList<>()
+        List<String> finalOids = new ArrayList<>()
         String ip
         String trapVer
         String trapOid
+        String type
 
         for (String oid : mapVarbinds.keySet()) {
             if (receivedStr.contains(oid)) {
@@ -110,22 +136,39 @@ class TrapGenerator {
                 while (matcher1.find())
                     ip = matcher1.group()
 
+                if (receivedStr.contains("INFORM")) {
+                    type = "INFORM"
+                } else {
+                    type = "trap"
+                }
+
                 if (receivedStr.contains("V1TRAP")) {
                     trapVer = "v1"
                 } else {
                     trapVer = "v2"
                 }
 
-                Pattern pattern2 = Pattern.compile("(?<=; |VBS\\[)1.3.6.1\\..+?(?= )( = )(.+?)(?=;|\\])")
+                Pattern pattern2 = Pattern.compile("((?<=; |VBS\\[)1.3.6.1\\..+?(?= ))( =)(.+?)(?=;|\\])")
                 Matcher matcher2 = pattern2.matcher(receivedStr)
 
-                while (matcher2.find()){
-
-                    if ((matcher2.group(0)).contains(oid)){
+                while (matcher2.find()) {
+                    char[] chars = matcher2.group(1).toCharArray()
+                    if (matcher2.group(1).equals(oid)) {
+                        String finalOid = matcher2.group(1)
                         String oidForList = oid
-                        String value = matcher2.group(2)
+                        String value = matcher2.group(3).trim()
+                        finalOids.add(finalOid)
                         values.add(value)
                         oids.add(oidForList)
+                    } else if (matcher2.group(1).contains(oid) && ((matcher2.group(1).size()) > oid.size())) {
+                        if (chars[oid.size()] == ('.')) {
+                            String finalOid = matcher2.group(1)
+                            String oidForList = oid
+                            String value = matcher2.group(3).trim()
+                            finalOids.add(finalOid)
+                            values.add(value)
+                            oids.add(oidForList)
+                        }
                     }
                 }
 
@@ -140,31 +183,51 @@ class TrapGenerator {
 
         TrapProperty trap
         if (ip != null && trapOid != null && oids != null && values != null) {
-             trap = new TrapProperty(ip, trapVer, trapOid, oids, values)
+            trap = new TrapProperty(ip, trapVer, trapOid, oids, finalOids, values, type)
         }
 
         StringBuilder stringBuilder = new StringBuilder()
-        String batFileName = trap.ip + "_" + trap.version + "_traps.bat"
+        String batFileName
+
+        if (trap.type.equals("INFORM")) {
+            batFileName = trap.ip + "_" + trap.version + "_informs.bat"
+        } else {
+            batFileName = trap.ip + "_" + trap.version + "_traps.bat"
+        }
+
+        File testFile = new File(batFilePath + "\\" + batFileName)
+
+        if (!testFile.exists()) {
+            stringBuilder.append("SET NETSNMP_PATH=C:\\usr\\bin\n")
+        }
+
         batFile = new File(batFilePath, batFileName)
 
         if (trap.version.equals("v1")) {
-            stringBuilder.append("SET NETSNMP_PATH=C:\\usr\\bin\n" +
-                    "%NETSNMP_PATH%\\snmptrap -v 1 -c public ")
+            stringBuilder.append("%NETSNMP_PATH%\\snmptrap -v 1 -c public ")
             stringBuilder.append(trap.ip + " ")
             stringBuilder.append(trap.trapOid + " ")
             stringBuilder.append(trap.ip + " 6 0 '55' ")
-        } else if (trap.version.equals("v2")) {
-            stringBuilder.append("SET NETSNMP_PATH=C:\\usr\\bin\n" +
-                    "%NETSNMP_PATH%\\snmptrap -v 2c -c public ")
+        } else if (trap.version.equals("v2") && trap.type.equals("trap")) {
+            stringBuilder.append("%NETSNMP_PATH%\\snmptrap -v 2c -c public ")
+            stringBuilder.append(trap.ip + " \"\" ")
+            stringBuilder.append(trap.trapOid + " ")
+        } else {
+            stringBuilder.append("%NETSNMP_PATH%\\snmpinform -v 2c -c public ")
             stringBuilder.append(trap.ip + " \"\" ")
             stringBuilder.append(trap.trapOid + " ")
         }
         for (int i = 0; i < trap.oids.size(); i++) {
-            stringBuilder.append(trap.oids[i] + " ")
-            stringBuilder.append(mapVarbinds.get(trap.oids[i]) + " ")
-            stringBuilder.append(trap.values[i] + " ")
+            if (!(trap.values[i].equals("")) && (mapVarbinds.get(trap.oids[i]).equals("i"))) {
+                stringBuilder.append(trap.finalOids[i] + " ")
+                stringBuilder.append(mapVarbinds.get(trap.oids[i]) + " ")
+                stringBuilder.append(trap.values[i] + " ")
+            } else if (!(trap.values[i].equals(""))) {
+                stringBuilder.append(trap.finalOids[i] + " ")
+                stringBuilder.append(mapVarbinds.get(trap.oids[i]) + " ")
+                stringBuilder.append("\"" + trap.values[i] + "\" ")
+            }
         }
-
         return stringBuilder
     }
 }
