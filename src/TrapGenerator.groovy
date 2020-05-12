@@ -182,50 +182,50 @@ class TrapGenerator {
         }
 
         TrapProperty trap
+        StringBuilder stringBuilder = new StringBuilder()
+
         if (ip != null && trapOid != null && oids != null && values != null) {
             trap = new TrapProperty(ip, trapVer, trapOid, oids, finalOids, values, type)
-        }
+            String batFileName
 
-        StringBuilder stringBuilder = new StringBuilder()
-        String batFileName
+            if (trap.type.equals("INFORM")) {
+                batFileName = trap.ip + "_" + trap.version + "_informs.bat"
+            } else {
+                batFileName = trap.ip + "_" + trap.version + "_traps.bat"
+            }
 
-        if (trap.type.equals("INFORM")) {
-            batFileName = trap.ip + "_" + trap.version + "_informs.bat"
-        } else {
-            batFileName = trap.ip + "_" + trap.version + "_traps.bat"
-        }
+            File testFile = new File(batFilePath + "\\" + batFileName)
 
-        File testFile = new File(batFilePath + "\\" + batFileName)
+            if (!testFile.exists()) {
+                stringBuilder.append("SET NETSNMP_PATH=C:\\usr\\bin\n")
+            }
 
-        if (!testFile.exists()) {
-            stringBuilder.append("SET NETSNMP_PATH=C:\\usr\\bin\n")
-        }
+            batFile = new File(batFilePath, batFileName)
 
-        batFile = new File(batFilePath, batFileName)
-
-        if (trap.version.equals("v1")) {
-            stringBuilder.append("%NETSNMP_PATH%\\snmptrap -v 1 -c public ")
-            stringBuilder.append(trap.ip + " ")
-            stringBuilder.append(trap.trapOid + " ")
-            stringBuilder.append(trap.ip + " 6 0 '55' ")
-        } else if (trap.version.equals("v2") && trap.type.equals("trap")) {
-            stringBuilder.append("%NETSNMP_PATH%\\snmptrap -v 2c -c public ")
-            stringBuilder.append(trap.ip + " \"\" ")
-            stringBuilder.append(trap.trapOid + " ")
-        } else {
-            stringBuilder.append("%NETSNMP_PATH%\\snmpinform -v 2c -c public ")
-            stringBuilder.append(trap.ip + " \"\" ")
-            stringBuilder.append(trap.trapOid + " ")
-        }
-        for (int i = 0; i < trap.oids.size(); i++) {
-            if (!(trap.values[i].equals("")) && (mapVarbinds.get(trap.oids[i]).equals("i"))) {
-                stringBuilder.append(trap.finalOids[i] + " ")
-                stringBuilder.append(mapVarbinds.get(trap.oids[i]) + " ")
-                stringBuilder.append(trap.values[i] + " ")
-            } else if (!(trap.values[i].equals(""))) {
-                stringBuilder.append(trap.finalOids[i] + " ")
-                stringBuilder.append(mapVarbinds.get(trap.oids[i]) + " ")
-                stringBuilder.append("\"" + trap.values[i] + "\" ")
+            if (trap.version.equals("v1")) {
+                stringBuilder.append("%NETSNMP_PATH%\\snmptrap -v 1 -c public ")
+                stringBuilder.append(trap.ip + " ")
+                stringBuilder.append(trap.trapOid + " ")
+                stringBuilder.append(trap.ip + " 6 0 '55' ")
+            } else if (trap.version.equals("v2") && trap.type.equals("trap")) {
+                stringBuilder.append("%NETSNMP_PATH%\\snmptrap -v 2c -c public ")
+                stringBuilder.append(trap.ip + " \"\" ")
+                stringBuilder.append(trap.trapOid + " ")
+            } else {
+                stringBuilder.append("%NETSNMP_PATH%\\snmpinform -v 2c -c public ")
+                stringBuilder.append(trap.ip + " \"\" ")
+                stringBuilder.append(trap.trapOid + " ")
+            }
+            for (int i = 0; i < trap.oids.size(); i++) {
+                if (!(trap.values[i].equals("")) && (mapVarbinds.get(trap.oids[i]).equals("i"))) {
+                    stringBuilder.append(trap.finalOids[i] + " ")
+                    stringBuilder.append(mapVarbinds.get(trap.oids[i]) + " ")
+                    stringBuilder.append(trap.values[i] + " ")
+                } else if (!(trap.values[i].equals(""))) {
+                    stringBuilder.append(trap.finalOids[i] + " ")
+                    stringBuilder.append(mapVarbinds.get(trap.oids[i]) + " ")
+                    stringBuilder.append("\"" + trap.values[i] + "\" ")
+                }
             }
         }
         return stringBuilder
